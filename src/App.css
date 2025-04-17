@@ -1,38 +1,229 @@
-.App {
-  text-align: center;
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f5f5f5;
+    color: #333;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.app {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.app-header {
+    text-align: center;
+    margin-bottom: 30px;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+.app-header h1 {
+    color: #2c3e50;
+    margin-bottom: 20px;
 }
 
-.App-link {
-  color: #61dafb;
+.search-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+#search-input {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.result {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.result:hover {
+    background-color: #f0f0f0;
+}
+
+.result-last {
+    border-bottom: none;
+    border-radius: 0 0 4px 4px;
+}
+
+.placeholder-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+.result-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    margin-right: 12px;
+    font-size: 18px;
+}
+
+.result-text {
+    flex: 1;
+}
+
+.lyrics-container {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.song-header {
+    display: flex;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.album-cover {
+    width: 120px;
+    height: 120px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-size: 36px;
+}
+
+.song-info {
+    flex: 1;
+    margin-left: 20px;
+}
+
+.lyrics-title {
+    font-size: 22px;
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+.artist-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.artist-image {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+    font-size: 14px;
+}
+
+.artist-name {
+    font-weight: 500;
+    color: #555;
+}
+
+.copy-lyrics {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #3498db;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.clipboard-icon {
+    font-size: 16px;
+}
+
+.copy-ok {
+    color: #27ae60;
+}
+
+.the-lyrics {
+    font-size: 16px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.chrome-extension {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.chrome-ext-link {
+    color: #3498db;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.chrome-ext-link:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .app {
+        padding: 15px;
+    }
+
+    .lyrics-container {
+        padding: 15px;
+    }
+
+    .song-header {
+        flex-direction: column;
+    }
+
+    .album-cover {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 15px;
+    }
+
+    .song-info {
+        margin-left: 0;
+    }
+
+    .lyrics-title {
+        font-size: 18px;
+    }
+
+    .the-lyrics {
+        font-size: 14px;
+    }
 }
