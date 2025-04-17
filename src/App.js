@@ -1,230 +1,180 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import "./App.css";
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [lyrics, setLyrics] = useState("");
-  const [selectedSong, setSelectedSong] = useState(null);
-  const [showLyrics, setShowLyrics] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const searchTimeoutRef = useRef(null);
-  const apiUrl = "https://api.lyrics.ovh";
+  const [selectedTrack, setSelectedTrack] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Use placeholder images instead of CDN images
-  const albumPlaceholder =
-    "https://placehold.co/250x250/3498db/ffffff?text=Album";
-  const artistPlaceholder =
-    "https://placehold.co/250x250/34495e/ffffff?text=Artist";
-
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (!searchTerm) {
-      setSearchResults([]);
+  // Fetch suggestions from Deezer API
+  const fetchSuggestions = (term) => {
+    if (!term) {
+      setSuggestions([]);
       return;
     }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      fetchSuggestions();
-    }, 300);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
+    const callbackName = `deezerSuggest_${Date.now()}`;
+    window[callbackName] = (data) => {
+      if (data && data.data) {
+        setSuggestions(data.data.slice(0, 8)); // Limit to 8 suggestions
+        setShowSuggestions(true);
       }
+      delete window[callbackName];
+      document.body.removeChild(document.getElementById(callbackName));
     };
-  }, [searchTerm]);
+    const script = document.createElement("script");
+    script.id = callbackName;
+    script.src = `https://api.deezer.com/search?q=${encodeURIComponent(
+      term,
+    )}&output=jsonp&callback=${callbackName}`;
+    document.body.appendChild(script);
+  };
 
-  const fetchSuggestions = async () => {
-    try {
-      console.log("Search suggestions for", searchTerm);
-      const response = await fetch(
-        `${apiUrl}/suggest/${encodeURIComponent(searchTerm)}`,
-      );
-      const data = await response.json();
+  // Debounce input
+  const debounceTimeout = useRef(null);
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setLyrics("");
+    setSelectedTrack(null);
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    debounceTimeout.current = setTimeout(() => {
+      fetchSuggestions(value);
+    }, 300);
+  };
 
-      const finalResults = [];
-      const seenResults = [];
-
-      data.data.forEach((result) => {
-        if (seenResults.length >= 5) {
-          return;
-        }
-
-        const displayText = `${result.title} - ${result.artist.name}`;
-
-        if (seenResults.indexOf(displayText) >= 0) {
-          return;
-        }
-
-        seenResults.push(displayText);
-        finalResults.push({
-          display: displayText,
-          artist: result.artist.name,
-          title: result.title,
-          // Using placeholders instead of actual image URLs
-          albumArt: albumPlaceholder,
-          artistImage: artistPlaceholder,
-        });
-      });
-
-      setSearchResults(finalResults);
-    } catch (error) {
-      console.error("Error fetching suggestions:", error);
+  // Play preview audio
+  const playPreview = (url) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (url) {
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.play();
+      setIsPlaying(true);
+      audio.onended = () => setIsPlaying(false);
     }
   };
 
-  const fetchLyrics = async (song) => {
-    try {
-      console.log("Search lyrics for", song);
-      setSelectedSong(song);
-      setSearchResults([]);
-      setShowLyrics(false);
-
-      const response = await fetch(
-        `${apiUrl}/v1/${encodeURIComponent(song.artist)}/${encodeURIComponent(song.title)}`,
-      );
-      const data = await response.json();
-
-      if (data.lyrics) {
-        setLyrics(data.lyrics);
-        setShowLyrics(true);
-      }
-    } catch (error) {
-      console.error("Error fetching lyrics:", error);
+  // Stop preview audio
+  const stopPreview = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setIsPlaying(false);
     }
   };
 
-  const copyToClipboard = () => {
-    if (lyrics) {
-      navigator.clipboard
-        .writeText(lyrics)
-        .then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 3000);
-        })
-        .catch((err) => {
-          console.error("Error copying to clipboard:", err);
-        });
-    }
+  // Fetch lyrics when suggestion is selected
+  const selectSuggestion = (track) => {
+    setSelectedTrack(track);
+    setShowSuggestions(false);
+    setLyrics("");
+    stopPreview();
+    fetch(
+      `https://api.lyrics.ovh/v1/${encodeURIComponent(
+        track.artist.name,
+      )}/${encodeURIComponent(track.title)}`,
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setLyrics(data.lyrics || "Lyrics not found.");
+      })
+      .catch(() => setLyrics("Lyrics not found."));
   };
 
-  const isChrome = () => {
-    const isChromium = window.chrome;
-    const winNav = window.navigator;
-    const vendorName = winNav.vendor;
-    const isOpera = winNav.userAgent.indexOf("OPR") > -1;
-    const isIEedge = winNav.userAgent.indexOf("Edge") > -1;
-    const isIOSChrome = winNav.userAgent.match("CriOS");
-
-    return (
-      isIOSChrome ||
-      (isChromium !== null &&
-        isChromium !== undefined &&
-        vendorName === "Google Inc." &&
-        isOpera === false &&
-        isIEedge === false)
-    );
-  };
-
-  // Generate a random color based on string input (for album/artist visual distinction)
-  const getColorFromString = (str) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  // Handle preview button in lyrics section
+  const handleLyricsPreview = () => {
+    if (!selectedTrack) return;
+    if (isPlaying) {
+      stopPreview();
+    } else {
+      playPreview(selectedTrack.preview);
     }
-    const color = Math.abs(hash).toString(16).substring(0, 6);
-    return "#" + "0".repeat(6 - color.length) + color;
   };
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Lyrics Search</h1>
-        <div className="search-container">
-          <input
-            type="text"
-            id="search-input"
-            placeholder="Search for a song or artist..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-
-          {searchResults.length > 0 && (
-            <ul className="results">
-              {searchResults.map((result, index) => (
-                <li
-                  key={index}
-                  className={`result ${index === searchResults.length - 1 ? "result-last" : ""}`}
-                  onClick={() => fetchLyrics(result)}
-                >
-                  <div
-                    className="placeholder-image result-image"
-                    style={{
-                      backgroundColor: getColorFromString(result.title),
+      <h1>SoundOfLife 🎵</h1>
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="Search for songs or artists"
+          value={searchTerm}
+          onChange={handleInputChange}
+          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+          className="search-input"
+        />
+        {showSuggestions && suggestions.length > 0 && (
+          <ul className="suggestions-list">
+            {suggestions.map((track) => (
+              <li
+                key={track.id}
+                className="suggestion-item"
+                onClick={() => selectSuggestion(track)}
+              >
+                <img
+                  src={track.album.cover_medium}
+                  alt="cover"
+                  className="suggestion-image"
+                />
+                <span className="suggestion-info">
+                  <span className="suggestion-title">{track.title}</span>
+                  <span className="suggestion-artist">
+                    {" "}
+                    — {track.artist.name}
+                  </span>
+                </span>
+                {track.preview && (
+                  <button
+                    className="preview-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isPlaying) {
+                        stopPreview();
+                      } else {
+                        playPreview(track.preview);
+                      }
                     }}
                   >
-                    <span>{result.title.charAt(0)}</span>
-                  </div>
-                  <span className="result-text">{result.display}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </header>
+                    {isPlaying ? "⏸️" : "▶️"}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
-      {showLyrics && selectedSong && (
+      {/* Song and lyrics display */}
+      {selectedTrack && (
         <div className="lyrics-container">
           <div className="song-header">
-            <div
-              className="placeholder-image album-cover"
-              style={{
-                backgroundColor: getColorFromString(selectedSong.title),
-              }}
-            >
-              <span>{selectedSong.title.charAt(0)}</span>
-            </div>
+            <img
+              className="album-cover"
+              src={selectedTrack.album.cover_medium}
+              alt="cover"
+            />
             <div className="song-info">
-              <h3 className="lyrics-title">{selectedSong.display}</h3>
-              <div className="artist-info">
-                <div
-                  className="placeholder-image artist-image"
-                  style={{
-                    backgroundColor: getColorFromString(selectedSong.artist),
-                  }}
-                >
-                  <span>{selectedSong.artist.charAt(0)}</span>
-                </div>
-                <span className="artist-name">{selectedSong.artist}</span>
+              <div className="lyrics-title">
+                {selectedTrack.title} — {selectedTrack.artist.name}
               </div>
-              <div className="copy-lyrics" onClick={copyToClipboard}>
-                <span>Copy the lyrics</span>
-                <span className="clipboard-icon">📋</span>
-                {copied && <span className="copy-ok"> - Done :-)</span>}
-              </div>
+              {selectedTrack.preview && (
+                <button className="preview-btn" onClick={handleLyricsPreview}>
+                  {isPlaying ? "Pause Preview" : "Play Preview"}
+                </button>
+              )}
             </div>
           </div>
-
           <div className="the-lyrics">
-            {lyrics.split("\n").map((line, i) => (
-              <React.Fragment key={i}>
-                {line}
-                <br />
-              </React.Fragment>
-            ))}
+            {lyrics ? lyrics : "Loading lyrics..."}
           </div>
-        </div>
-      )}
-
-      {isChrome() && (
-        <div id="dl-chrome-ext" className="chrome-extension">
-          <a href="#" className="chrome-ext-link">
-            Download Chrome Extension
-          </a>
         </div>
       )}
     </div>
